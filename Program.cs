@@ -6,7 +6,7 @@ namespace Training_Project
     {
         public static void runFinanceApp()
         {
-            FinanceManager manager = new FinanceManager();
+            TransactionManager manager = new TransactionManager();
 
             bool running = true;
             while (running)
@@ -14,16 +14,12 @@ namespace Training_Project
                 Console.WriteLine("\n--- Personal Finance Manager ---");
                 Console.WriteLine("1. Add Transaction");
                 Console.WriteLine("2. View All Transactions");
-                Console.WriteLine("3. View Transactions by Category");
-                Console.WriteLine("4. Add Category");
-                Console.WriteLine("5. Modify Category");
-                Console.WriteLine("6. Delete Category");
-                Console.WriteLine("7. Modify Transaction");
-                Console.WriteLine("8. Delete Transaction");
-                Console.WriteLine("9. View Total Balance");
-                Console.WriteLine("10. Sort Transactions");
-                Console.WriteLine("11. Filter Transactions");
-                Console.WriteLine("12. Exit");
+                Console.WriteLine("3. Modify Transaction");
+                Console.WriteLine("4. Delete Transaction");
+                Console.WriteLine("5. View Total Balance");
+                Console.WriteLine("6. Sort Transactions");
+                Console.WriteLine("7. Filter Transactions");
+                Console.WriteLine("8. Exit");
 
                 Console.Write("Choose an option: ");
                 string? input = Console.ReadLine();
@@ -34,46 +30,32 @@ namespace Training_Project
                         manager.AddTransaction();
                         break;
 
-                    case "2": // View all Transactions
-                        manager.ShowAllTransactions();
+                    case "2": // View all
+                        bool showId = false;
+                        manager.ShowAllTransactions(showId);
                         break;
 
-                    case "3": // View Transactions by Category
-                        manager.ShowTransactionsByCategory();
-                        break;
-
-                    case "4": // Add Category
-                        manager.AddCategory();
-                        break;
-
-                    case "5": // Modify Category
-                        manager.ModifyCategory();
-                        break;
-
-                    case "6": // Delete category
-                        manager.DeleteCategory();
-                        break;
-
-                    case "7":  // Modify transaction
+                    case "3":  // Modify transaction
                         manager.ModifyTransaction();
                         break;
 
-                    case "8":  // Delete transaction
+                    case "4":  // Delete transaction
                         manager.DeleteTransaction();
                         break;
 
-                    case "9": // View total balance
+                    case "5": // View total balance
                         Console.WriteLine($"Total Balance: {manager.GetTotalBalance():C}");
                         break;
 
-                    case "10":
+                    case "6": // Sort Transactions
                         manager.SortTransactions();
                         break;
 
-                    case "11":
-
+                    case "7": // Filter Transactions
+                        manager.FilterTransactions();
                         break;
-                    case "12":
+
+                    case "8":
                         running = false;
                         break;
 

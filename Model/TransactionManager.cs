@@ -9,58 +9,33 @@ namespace Training_Project.Model
         private List<Transaction> transactions;
         private int nextTransactionId; // Tracks the next unique ID
         private CategoryManager categoryManager;
+        private TransactionUserInputManager transactionUserInput;
 
         public TransactionManager()
         {
             transactions = new List<Transaction>(); // Initialize the list
             LoadTransactions();
             nextTransactionId = transactions.Any() ? transactions.Max(t => t.Id) + 1 : 1; // Initialize ID tracking
-            categoryManager = new CategoryManager(this);
+            categoryManager = new CategoryManager(transactions);
+            transactionUserInput = new TransactionUserInputManager();
         }
 
+        //Add a new transaction
         public void AddTransaction()
         {
             Console.WriteLine("--- NEW TRANSACTION ---");
-            Console.Write("Enter description: ");
-            string? description = Console.ReadLine()?.Trim();
-            while (string.IsNullOrWhiteSpace(description))
-            {
-                Console.Write("Invalid value. Please enter a valid Description: ");
-                description = Console.ReadLine();
-            }
-
-            decimal amount;
-            Console.Write("Enter amount (£): ");
-            while (!decimal.TryParse(Console.ReadLine(), out amount) || amount < 0)
-            {
-                Console.Write("Invalid value. Please enter a valid positive amount: ");
-            }
-
-            Console.Write("Is this Income or Expense? (I/E): ");
-            string? typeInput = Console.ReadLine()?.ToUpper();
-            while (typeInput != "I" && typeInput != "E")
-            {
-                Console.WriteLine("Invalid input. Please enter 'I' for Income or 'E' for Expense: ");
-                typeInput = Console.ReadLine()?.ToUpper();
-            }
-            TransactionType type = typeInput == "I" ? TransactionType.Income : TransactionType.Expense;
-
-            Console.WriteLine("--- CATEGORIES ---");
+            // Description
+            string description = transactionUserInput.GetDescriptionInput();
+            // Amount
+            decimal amount = transactionUserInput.GetAmountInput();
+            // Type (I/E)
+            TransactionType type = transactionUserInput.GetTransactionType("Is this an Income or Expense? (Enter I/E): ");
+            // Category
             categoryManager.ShowAllCategories();
             List<string> categories = categoryManager.GetCategories();
-            string? category;
-            do
-            {
-                Console.Write("Enter a category: ");
-                category = Console.ReadLine()?.Trim();
-
-                if (string.IsNullOrWhiteSpace(category) || !categories.Contains(category))
-                {
-                    Console.WriteLine("Invalid category. Please try again.");
-                }
-            }
-            while (string.IsNullOrWhiteSpace(category) || !categories.Contains(category));
-
+            string category = transactionUserInput.GetCategoryInput();
+            categoryManager.AddCategory(category);
+            // Date
             var date = DateTime.Now;
 
             var transaction = new Transaction(description, amount, type, category, date)
@@ -76,9 +51,7 @@ namespace Training_Project.Model
         public void ModifyTransaction()
         {
             int id;
-
-            Console.WriteLine("\n--- TRANSACTIONS ---");
-            ShowAllTransactionsWithId();
+            ShowAllTransactions(true);
 
             Console.Write("Enter transaction ID to modify:");
             if (!int.TryParse(Console.ReadLine(), out id))
@@ -162,9 +135,7 @@ namespace Training_Project.Model
         public void DeleteTransaction()
         {
             int id;
-
-            Console.WriteLine("\n--- TRANSACTIONS ---");
-            ShowAllTransactions();
+            ShowAllTransactions(true);
 
             Console.Write("Enter transaction ID to delete: ");
             if (!int.TryParse(Console.ReadLine(), out id))
@@ -186,22 +157,11 @@ namespace Training_Project.Model
             }
         }
 
-        // Get all transactions that belong to a specific category
-        public List<Transaction> GetTransactionsByCategory(string category)
+        // Search for a transaction
+        public void SearchTransactions()
         {
-            return transactions.Where(t => t.Category == category).ToList();
-        }
+            Console.WriteLine("Enter search criteria (Press Enter to skip any field):");
 
-        // Modify the Category name for transactions
-        public void ModifyCategoryForTransactions(string category, string newCategory)
-        {
-            transactions.ForEach(transaction =>
-            {
-                if (transaction.Category.Equals(category))
-                {
-                    transaction.Category = newCategory;
-                }
-            });
 
         }
 
@@ -212,23 +172,23 @@ namespace Training_Project.Model
         }
 
         // Show all transactions
-        public void ShowAllTransactions()
+        public void ShowAllTransactions(bool showId)
         {
             Console.WriteLine("\n--- TRANSACTIONS ---");
-            foreach (var transaction in transactions)
+            if (showId)
             {
-                Console.WriteLine(transaction.ToString());
-            }
-            Console.WriteLine("------");
-        }
+                foreach (var transaction in transactions)
+                {
+                    Console.WriteLine($"ID: {transaction.Id} | {transaction.ToString()}");
 
-        // Display transactions with their corresponding ID
-        public void ShowAllTransactionsWithId()
-        {
-            Console.WriteLine("\n--- TRANSACTIONS ---");
-            foreach (var transaction in transactions)
+                }
+            }
+            else
             {
-                Console.WriteLine($"ID: {transaction.Id} | {transaction.ToString()}");
+                foreach (var transaction in transactions)
+                {
+                    Console.WriteLine(transaction.ToString());
+                }
             }
             Console.WriteLine("------");
         }
@@ -236,14 +196,13 @@ namespace Training_Project.Model
         // Sort Transactions by date, amount, category
         public void SortTransactions()
         {
-            List<string> sortByCategories = new List<string> { "Amount", "Category", "Date", "Type" };
-            Console.WriteLine("--- Sort Options ---");
-            foreach (var sort in sortByCategories)
-            {
-                Console.WriteLine(sort);
-            }
+            Console.WriteLine("--- Sort Options: ---");
+            Console.WriteLine("Amount");
+            Console.WriteLine("Category");
+            Console.WriteLine("Date");
+            Console.WriteLine("Type");
             Console.WriteLine("------");
-            Console.Write("Sort by: ");
+            Console.Write("Enter a type to sort by: ");
             string? sortBy = Console.ReadLine();
 
             List<Transaction> sortedTransactions = new List<Transaction>();
@@ -269,6 +228,89 @@ namespace Training_Project.Model
             // Display the sorted transactions
             Console.WriteLine("\n--- Sorted Transactions ---");
             foreach (var transaction in sortedTransactions)
+            {
+                Console.WriteLine(transaction.ToString());
+            }
+        }
+
+        public List<Transaction> FilterByCategory()
+        {
+            List<string> categories = categoryManager.GetCategories();
+            if (categories != null)
+            {
+                categoryManager.ShowAllCategories();
+            }
+            else
+            {
+                Console.WriteLine("No categories. Please add a transaction from the main menu.");
+                return [];  // Return empty list
+            }
+
+            string category;
+            do
+            {
+                category = transactionUserInput.GetCategoryInput();
+                if (categories.Contains(category))
+                {
+                    break;
+                }
+                Console.WriteLine("Invalid Category value. Please try again.");
+            }
+            while (!categories.Contains(category));
+            return transactions.Where(t => t.Category.ToLower() == category.ToLower()).ToList();
+        }
+
+        // Filter transactions
+        public void FilterTransactions()
+        {
+            List<Transaction> filteredTransactions = new List<Transaction>();
+            Console.WriteLine("--- Filter Options: ---");
+            Console.WriteLine("Type");
+            Console.WriteLine("Category");
+            Console.WriteLine("Date Range");
+            Console.WriteLine("------");
+            Console.Write("Enter a type to filter by: ");
+            string? filterBy = Console.ReadLine();
+
+            switch (filterBy.ToLower())
+            {
+                case "type":
+                    TransactionType type = transactionUserInput.GetTransactionType("Filter by Income Or Expense? (Enter I/E):");
+                    filteredTransactions = transactions.Where(t => t.Type == type).ToList();
+
+                    break;
+                case "category":
+                    filteredTransactions = FilterByCategory();
+                    break;
+                case "date":
+                    DateTime startDate;
+                    DateTime endDate;
+                    do
+                    {
+                        startDate = transactionUserInput.GetValidDate("Enter start date (yyyy-MM-dd): ");
+                        endDate = transactionUserInput.GetValidDate("Enter end date (yyyy-MM-dd): ");
+                        // Check if the end date is not earlier than the start date
+                        if (endDate < startDate)
+                        {
+                            Console.WriteLine("End date cannot be earlier than start date. Please enter the dates again.");
+                        }
+                    }
+                    while (endDate < startDate);
+                    filteredTransactions = transactions.Where(t => t.Date >= startDate && t.Date <= endDate).ToList();
+                    break;
+                default:
+                    Console.WriteLine("Invalid filter option.");
+                    return;
+            }
+
+            if (filteredTransactions.Count == 0)
+            {
+                Console.WriteLine("No Transactions.");
+                return;
+            }
+            // Display the filtered transactions
+            Console.WriteLine("\n--- Filtered Transactions ---");
+            foreach (var transaction in filteredTransactions)
             {
                 Console.WriteLine(transaction.ToString());
             }
