@@ -1,141 +1,62 @@
-﻿
-using System.Text.Json;
+﻿using Training_Project.Interfaces;
+using Training_Project.Model;
 
-namespace Training_Project.Model
+namespace Training_Project.Managers
 {
-    internal class TransactionManager
+    internal class TransactionManager : ITransactionManager
     {
         private const string TransactionsFileName = "transactions.json";
         private List<Transaction> transactions;
         private int nextTransactionId; // Tracks the next unique ID
-        private CategoryManager categoryManager;
-        private TransactionUserInputManager transactionUserInput;
+        private ICategoryManager<string> categoryManager;
+        private ITransactionUserInputManager transactionUserInput;
+        private ITransactionFileManager fileManager;
 
-        public TransactionManager()
+        public TransactionManager(ITransactionFileManager fileManager)
         {
-            transactions = new List<Transaction>(); // Initialize the list
-            LoadTransactions();
+            this.fileManager = fileManager;
+
+            transactions = fileManager.LoadTransactions(TransactionsFileName) ?? new List<Transaction>();
             nextTransactionId = transactions.Any() ? transactions.Max(t => t.Id) + 1 : 1; // Initialize ID tracking
-            categoryManager = new CategoryManager(transactions);
-            transactionUserInput = new TransactionUserInputManager();
+        }
+
+        public void SetCategoryManager(ICategoryManager<string> categoryManager)
+        {
+            this.categoryManager = categoryManager;
+        }
+
+        public void SetTransactionUserInputManager(ITransactionUserInputManager transactionUserInputManager)
+        {
+            this.transactionUserInput = transactionUserInputManager;
         }
 
         //Add a new transaction
-        public void AddTransaction()
+        public void Add()
         {
             Console.WriteLine("--- NEW TRANSACTION ---");
-            // Description
             string description = transactionUserInput.GetDescriptionInput();
-            // Amount
             decimal amount = transactionUserInput.GetAmountInput();
-            // Type (I/E)
             TransactionType type = transactionUserInput.GetTransactionType("Is this an Income or Expense? (Enter I/E): ");
-            // Category
-            categoryManager.ShowAllCategories();
-            List<string> categories = categoryManager.GetCategories();
-            string category = transactionUserInput.GetCategoryInput();
-            categoryManager.AddCategory(category);
-            // Date
-            var date = DateTime.Now;
 
-            var transaction = new Transaction(description, amount, type, category, date)
+            categoryManager.ShowAll();
+            string category = transactionUserInput.GetCategoryInput();
+            categoryManager.Add(category);
+
+            var transaction = new Transaction(description, amount, type, category, DateTime.Now)
             {
                 Id = nextTransactionId++ // Automatically assigns a unique Id
             };
+
             transactions.Add(transaction);
-            SaveTransactions();
+            fileManager.SaveTransactions(TransactionsFileName, transactions);
             Console.WriteLine("Transaction added with ID: " + transaction.Id);
         }
 
-        // Modify a specific transaction by its Id
-        public void ModifyTransaction()
-        {
-            int id;
-            ShowAllTransactions(true);
-
-            Console.Write("Enter transaction ID to modify:");
-            if (!int.TryParse(Console.ReadLine(), out id))
-            {
-                Console.Write("Invalid value.");
-                return;
-            }
-
-            var transaction = transactions.FirstOrDefault(t => t.Id == id);
-            if (transaction != null)
-            {
-                // Description (allow skipping by pressing enter)
-                Console.Write("Enter description (or press Enter to skip): ");
-                string? description = Console.ReadLine();
-                if (!string.IsNullOrWhiteSpace(description))
-                {
-                    transaction.Description = description;
-                }
-
-                // Amount (allow skipping by pressing enter)
-                Console.Write("Enter amount (or press Enter to skip): ");
-                string? amountToParse = Console.ReadLine()?.Trim();
-                if (!string.IsNullOrWhiteSpace(amountToParse) && decimal.TryParse(amountToParse, out decimal amount))
-                {
-                    transaction.Amount = amount;
-                }
-                else if (!string.IsNullOrWhiteSpace(amountToParse))
-                {
-                    Console.WriteLine("Invalid value for amount, keeping the current amount.");
-                }
-
-                // Income or Expense (allow skipping by pressing enter)
-                Console.Write("Is this Income or Expense? (I/E) (or press Enter to skip): ");
-                string? typeInput = Console.ReadLine()?.Trim();
-                if (!string.IsNullOrWhiteSpace(typeInput))
-                {
-                    if (typeInput.Equals("I", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        transaction.Type = TransactionType.Income;
-                    }
-                    else if (typeInput.Equals("E", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        transaction.Type = TransactionType.Expense;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Invalid type input, keeping the current type.");
-                    }
-                }
-
-                // Category (allow skipping by pressing enter)
-                Console.WriteLine("--- CATEGORIES ---");
-                categoryManager.ShowAllCategories();
-                List<string> categories = categoryManager.GetCategories();
-
-                Console.Write("Enter a category (or press Enter to skip): ");
-                string? category = Console.ReadLine()?.Trim();
-                if (!string.IsNullOrWhiteSpace(category) && categories.Contains(category))
-                {
-                    transaction.Category = category;
-                }
-                else if (!string.IsNullOrWhiteSpace(category))
-                {
-                    Console.WriteLine("Invalid category, keeping the current category.");
-                }
-
-                // Update the transaction date to the current date
-                transaction.Date = DateTime.Now;
-
-                // Save changes
-                SaveTransactions();
-                Console.WriteLine("Transaction modified.");
-            }
-            else
-            {
-                Console.WriteLine($"Transaction with ID {id} not found.");
-            }
-        }
-
         // Remove transaction by its Id
-        public void DeleteTransaction()
+        public void Remove()
         {
             int id;
-            ShowAllTransactions(true);
+            ShowAll(true);
 
             Console.Write("Enter transaction ID to delete: ");
             if (!int.TryParse(Console.ReadLine(), out id))
@@ -148,7 +69,7 @@ namespace Training_Project.Model
             if (transaction != null)
             {
                 transactions.Remove(transaction);
-                SaveTransactions();
+                Save();
                 Console.WriteLine("Transaction deleted.");
             }
             else
@@ -157,22 +78,39 @@ namespace Training_Project.Model
             }
         }
 
-        // Search for a transaction
-        public void SearchTransactions()
+        // Modify a specific transaction by its Id
+        public void Modify()
         {
-            Console.WriteLine("Enter search criteria (Press Enter to skip any field):");
+            ShowAll(true);
+            int id = transactionUserInput.GetTransactionId();
 
+            var transaction = transactions.FirstOrDefault(t => t.Id == id);
+            if (transaction != null)
+            {
+                transaction = transactionUserInput.UpdateTransactionFields(transaction);
 
+                // New Category entered during modification
+                if (!categoryManager.GetAll().Contains(transaction.Category))
+                {
+                    categoryManager.Add(transaction.Category);
+                }
+                Save();
+                Console.WriteLine($"Transaction with ID {id} modified.");
+            }
+            else
+            {
+                Console.WriteLine($"Transaction with ID {id} not found.");
+            }
         }
 
         // Get all transactions
-        public List<Transaction> GetAllTransactions()
+        public List<Transaction> GetAll()
         {
             return transactions;
         }
 
         // Show all transactions
-        public void ShowAllTransactions(bool showId)
+        public void ShowAll(bool showId)
         {
             Console.WriteLine("\n--- TRANSACTIONS ---");
             if (showId)
@@ -193,8 +131,16 @@ namespace Training_Project.Model
             Console.WriteLine("------");
         }
 
+        // Search for a transaction
+        public void Search()
+        {
+            Console.WriteLine("Enter search criteria (Press Enter to skip any field):");
+
+
+        }
+
         // Sort Transactions by date, amount, category
-        public void SortTransactions()
+        public void Sort()
         {
             Console.WriteLine("--- Sort Options: ---");
             Console.WriteLine("Amount");
@@ -235,10 +181,10 @@ namespace Training_Project.Model
 
         public List<Transaction> FilterByCategory()
         {
-            List<string> categories = categoryManager.GetCategories();
+            List<string> categories = categoryManager.GetAll();
             if (categories != null)
             {
-                categoryManager.ShowAllCategories();
+                categoryManager.ShowAll();
             }
             else
             {
@@ -261,13 +207,13 @@ namespace Training_Project.Model
         }
 
         // Filter transactions
-        public void FilterTransactions()
+        public void Filter()
         {
             List<Transaction> filteredTransactions = new List<Transaction>();
             Console.WriteLine("--- Filter Options: ---");
             Console.WriteLine("Type");
             Console.WriteLine("Category");
-            Console.WriteLine("Date Range");
+            Console.WriteLine("Date");
             Console.WriteLine("------");
             Console.Write("Enter a type to filter by: ");
             string? filterBy = Console.ReadLine();
@@ -275,7 +221,7 @@ namespace Training_Project.Model
             switch (filterBy.ToLower())
             {
                 case "type":
-                    TransactionType type = transactionUserInput.GetTransactionType("Filter by Income Or Expense? (Enter I/E):");
+                    TransactionType type = transactionUserInput.GetTransactionType("Filter by Income Or Expense? (Enter I/E): ");
                     filteredTransactions = transactions.Where(t => t.Type == type).ToList();
 
                     break;
@@ -287,8 +233,8 @@ namespace Training_Project.Model
                     DateTime endDate;
                     do
                     {
-                        startDate = transactionUserInput.GetValidDate("Enter start date (yyyy-MM-dd): ");
-                        endDate = transactionUserInput.GetValidDate("Enter end date (yyyy-MM-dd): ");
+                        startDate = transactionUserInput.GetValidDate("Enter start date (dd-MM-yyyy): ");
+                        endDate = transactionUserInput.GetValidDate("Enter end date (dd-MM-yyyy): ");
                         // Check if the end date is not earlier than the start date
                         if (endDate < startDate)
                         {
@@ -317,24 +263,15 @@ namespace Training_Project.Model
         }
 
         // Method to save transactions to a JSON file
-        private void SaveTransactions()
+        private void Save()
         {
-            var json = JsonSerializer.Serialize(transactions);
-            File.WriteAllText(TransactionsFileName, json);
+            fileManager.SaveTransactions(TransactionsFileName, transactions);
         }
 
         // Method to load transactions from a JSON file
-        private void LoadTransactions()
+        private void Load()
         {
-            if (File.Exists(TransactionsFileName))
-            {
-                var json = File.ReadAllText(TransactionsFileName);
-                transactions = JsonSerializer.Deserialize<List<Transaction>>(json) ?? [];
-            }
-            else
-            {
-                transactions = [];
-            }
+            transactions = fileManager.LoadTransactions(TransactionsFileName);
         }
 
         // Get the total balance of transactions (Income - Expenses)
@@ -342,6 +279,7 @@ namespace Training_Project.Model
         {
             return transactions.Sum(t => t.Type == TransactionType.Income ? t.Amount : -t.Amount);
         }
+
     }
 
 }

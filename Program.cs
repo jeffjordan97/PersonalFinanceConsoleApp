@@ -1,4 +1,5 @@
-﻿using Training_Project.Model;
+﻿using Training_Project.Managers;
+using Training_Project.Utilities;
 
 namespace Training_Project
 {
@@ -6,7 +7,15 @@ namespace Training_Project
     {
         public static void runFinanceApp()
         {
-            TransactionManager manager = new TransactionManager();
+            JsonTransactionFileManager fileManager = new JsonTransactionFileManager();
+            TransactionManager manager = new TransactionManager(fileManager);
+            CategoryManager categoryManager = new CategoryManager(manager.GetAll());
+            TransactionUserInputManager userInputManager = new TransactionUserInputManager();
+
+            manager.SetCategoryManager(categoryManager);
+            userInputManager.SetCategoryManager(categoryManager);
+            manager.SetTransactionUserInputManager(userInputManager);
+
 
             bool running = true;
             while (running)
@@ -27,20 +36,20 @@ namespace Training_Project
                 switch (input)
                 {
                     case "1": // Add Transaction
-                        manager.AddTransaction();
+                        manager.Add();
                         break;
 
                     case "2": // View all
                         bool showId = false;
-                        manager.ShowAllTransactions(showId);
+                        manager.ShowAll(showId);
                         break;
 
                     case "3":  // Modify transaction
-                        manager.ModifyTransaction();
+                        manager.Modify();
                         break;
 
                     case "4":  // Delete transaction
-                        manager.DeleteTransaction();
+                        manager.Remove();
                         break;
 
                     case "5": // View total balance
@@ -48,11 +57,11 @@ namespace Training_Project
                         break;
 
                     case "6": // Sort Transactions
-                        manager.SortTransactions();
+                        manager.Sort();
                         break;
 
                     case "7": // Filter Transactions
-                        manager.FilterTransactions();
+                        manager.Filter();
                         break;
 
                     case "8":
