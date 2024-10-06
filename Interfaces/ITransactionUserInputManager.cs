@@ -2,7 +2,7 @@
 
 namespace Training_Project.Interfaces
 {
-    internal interface ITransactionUserInputManager
+    public interface ITransactionUserInputManager
     {
         int GetTransactionId();
         string GetDescriptionInput();
@@ -13,5 +13,7 @@ namespace Training_Project.Interfaces
         //string GetFilterOption();
         (DateTime startDate, DateTime endDate) GetDateRange();
         DateTime GetValidDate(string prompt);
+        string? GetSortOption();
+        string? GetFilterOption();
     }
 }

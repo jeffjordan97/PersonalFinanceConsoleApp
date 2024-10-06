@@ -1,6 +1,6 @@
 namespace Training_Project.Model
 {
-    internal enum TransactionType
+    public enum TransactionType
     {
         Income,
         Expense

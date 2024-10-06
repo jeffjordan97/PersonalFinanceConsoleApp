@@ -1,6 +1,6 @@
 ﻿namespace Training_Project.Interfaces
 {
-    internal interface ICategoryManager<T>
+    public interface ICategoryManager<T>
     {
         void Add(T item);
         void Remove(T item);

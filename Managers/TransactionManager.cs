@@ -9,7 +9,7 @@ namespace Training_Project.Managers
         private List<Transaction> transactions;
         private int nextTransactionId; // Tracks the next unique ID
         private ICategoryManager<string> categoryManager;
-        private ITransactionUserInputManager transactionUserInput;
+        private ITransactionUserInputManager userInputManager;
         private ITransactionFileManager fileManager;
 
         public TransactionManager(ITransactionFileManager fileManager)
@@ -25,21 +25,21 @@ namespace Training_Project.Managers
             this.categoryManager = categoryManager;
         }
 
-        public void SetTransactionUserInputManager(ITransactionUserInputManager transactionUserInputManager)
+        public void SetuserInputManagerManager(ITransactionUserInputManager userInputManagerManager)
         {
-            this.transactionUserInput = transactionUserInputManager;
+            this.userInputManager = userInputManagerManager;
         }
 
         //Add a new transaction
         public void Add()
         {
             Console.WriteLine("--- NEW TRANSACTION ---");
-            string description = transactionUserInput.GetDescriptionInput();
-            decimal amount = transactionUserInput.GetAmountInput();
-            TransactionType type = transactionUserInput.GetTransactionType("Is this an Income or Expense? (Enter I/E): ");
+            string description = userInputManager.GetDescriptionInput();
+            decimal amount = userInputManager.GetAmountInput();
+            TransactionType type = userInputManager.GetTransactionType("Is this an Income or Expense? (Enter I/E): ");
 
             categoryManager.ShowAll();
-            string category = transactionUserInput.GetCategoryInput();
+            string category = userInputManager.GetCategoryInput();
             categoryManager.Add(category);
 
             var transaction = new Transaction(description, amount, type, category, DateTime.Now)
@@ -82,12 +82,12 @@ namespace Training_Project.Managers
         public void Modify()
         {
             ShowAll(true);
-            int id = transactionUserInput.GetTransactionId();
+            int id = userInputManager.GetTransactionId();
 
             var transaction = transactions.FirstOrDefault(t => t.Id == id);
             if (transaction != null)
             {
-                transaction = transactionUserInput.UpdateTransactionFields(transaction);
+                transaction = userInputManager.UpdateTransactionFields(transaction);
 
                 // New Category entered during modification
                 if (!categoryManager.GetAll().Contains(transaction.Category))
@@ -139,127 +139,57 @@ namespace Training_Project.Managers
 
         }
 
-        // Sort Transactions by date, amount, category
-        public void Sort()
+        // Apply strategy to sort or filter
+        private void ApplyStrategy<TStrategy>(TStrategy? strategy, string prompt) where TStrategy : class
         {
-            Console.WriteLine("--- Sort Options: ---");
-            Console.WriteLine("Amount");
-            Console.WriteLine("Category");
-            Console.WriteLine("Date");
-            Console.WriteLine("Type");
-            Console.WriteLine("------");
-            Console.Write("Enter a type to sort by: ");
-            string? sortBy = Console.ReadLine();
-
-            List<Transaction> sortedTransactions = new List<Transaction>();
-            switch (sortBy.ToLower())
+            if (strategy == null)
             {
-                case "amount":
-                    sortedTransactions = transactions.OrderBy(t => t.Amount).ToList();
-                    break;
-                case "category":
-                    sortedTransactions = transactions.OrderBy(t => t.Category).ToList();
-                    break;
-                case "date":
-                    sortedTransactions = transactions.OrderBy(t => t.Date).ToList();
-                    break;
-                case "type":
-                    sortedTransactions = transactions.OrderBy(t => t.Type).ToList();
-                    break;
-                default:
-                    Console.WriteLine("Invalid sorting option.");
-                    return;
+                Console.WriteLine("Invalid option.");
+                return;
             }
 
-            // Display the sorted transactions
-            Console.WriteLine("\n--- Sorted Transactions ---");
-            foreach (var transaction in sortedTransactions)
+            List<Transaction> resultTransactions = (strategy as ITransactionSortStrategy)?.Sort(transactions)
+                                                   ?? (strategy as ITransactionFilterStrategy)?.Filter(transactions)
+                                                   ?? new List<Transaction>();
+
+            // Display the result transactions
+            DisplayTransactions(resultTransactions, prompt);
+        }
+
+        // General method to display a list of transactions
+        private void DisplayTransactions(List<Transaction> transactions, string prompt)
+        {
+            if (transactions.Count == 0)
+            {
+                Console.WriteLine("No Transactions.");
+                return;
+            }
+
+            Console.WriteLine($"\n--- {prompt} ---");
+            foreach (var transaction in transactions)
             {
                 Console.WriteLine(transaction.ToString());
             }
         }
 
-        public List<Transaction> FilterByCategory()
+        // Sort Transactions by date, amount, category
+        public void Sort()
         {
-            List<string> categories = categoryManager.GetAll();
-            if (categories != null)
-            {
-                categoryManager.ShowAll();
-            }
-            else
-            {
-                Console.WriteLine("No categories. Please add a transaction from the main menu.");
-                return [];  // Return empty list
-            }
+            string? sortBy = userInputManager.GetSortOption();
+            TransactionSortManager sortManager = new TransactionSortManager();
+            ITransactionSortStrategy? sortingStrategy = sortManager.GetSortingStrategy(sortBy);
 
-            string category;
-            do
-            {
-                category = transactionUserInput.GetCategoryInput();
-                if (categories.Contains(category))
-                {
-                    break;
-                }
-                Console.WriteLine("Invalid Category value. Please try again.");
-            }
-            while (!categories.Contains(category));
-            return transactions.Where(t => t.Category.ToLower() == category.ToLower()).ToList();
+            ApplyStrategy(sortingStrategy, "Sorted Transactions");
         }
 
         // Filter transactions
         public void Filter()
         {
-            List<Transaction> filteredTransactions = new List<Transaction>();
-            Console.WriteLine("--- Filter Options: ---");
-            Console.WriteLine("Type");
-            Console.WriteLine("Category");
-            Console.WriteLine("Date");
-            Console.WriteLine("------");
-            Console.Write("Enter a type to filter by: ");
-            string? filterBy = Console.ReadLine();
+            string? filter = userInputManager.GetFilterOption();
+            TransactionFilterManager filterManager = new TransactionFilterManager(userInputManager, categoryManager);
+            ITransactionFilterStrategy? filterStrategy = filterManager.GetFilterStrategy(filter);
 
-            switch (filterBy.ToLower())
-            {
-                case "type":
-                    TransactionType type = transactionUserInput.GetTransactionType("Filter by Income Or Expense? (Enter I/E): ");
-                    filteredTransactions = transactions.Where(t => t.Type == type).ToList();
-
-                    break;
-                case "category":
-                    filteredTransactions = FilterByCategory();
-                    break;
-                case "date":
-                    DateTime startDate;
-                    DateTime endDate;
-                    do
-                    {
-                        startDate = transactionUserInput.GetValidDate("Enter start date (dd-MM-yyyy): ");
-                        endDate = transactionUserInput.GetValidDate("Enter end date (dd-MM-yyyy): ");
-                        // Check if the end date is not earlier than the start date
-                        if (endDate < startDate)
-                        {
-                            Console.WriteLine("End date cannot be earlier than start date. Please enter the dates again.");
-                        }
-                    }
-                    while (endDate < startDate);
-                    filteredTransactions = transactions.Where(t => t.Date >= startDate && t.Date <= endDate).ToList();
-                    break;
-                default:
-                    Console.WriteLine("Invalid filter option.");
-                    return;
-            }
-
-            if (filteredTransactions.Count == 0)
-            {
-                Console.WriteLine("No Transactions.");
-                return;
-            }
-            // Display the filtered transactions
-            Console.WriteLine("\n--- Filtered Transactions ---");
-            foreach (var transaction in filteredTransactions)
-            {
-                Console.WriteLine(transaction.ToString());
-            }
+            ApplyStrategy(filterStrategy, "Filtered Transactions");
         }
 
         // Method to save transactions to a JSON file

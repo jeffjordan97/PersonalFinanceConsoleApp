@@ -1,6 +1,6 @@
 ﻿namespace Training_Project.Model
 {
-    internal class Transaction(string description, decimal amount, TransactionType type, string category, DateTime date)
+    public class Transaction(string description, decimal amount, TransactionType type, string category, DateTime date)
     {
         public int Id { get; set; }
         public string Description { get; set; } = description;

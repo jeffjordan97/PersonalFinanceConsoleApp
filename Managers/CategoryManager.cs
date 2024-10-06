@@ -3,7 +3,7 @@ using Training_Project.Model;
 
 namespace Training_Project.Managers
 {
-    internal class CategoryManager : ICategoryManager<string>
+    public class CategoryManager : ICategoryManager<string>
     {
         private List<string> categories;
 

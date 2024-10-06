@@ -3,7 +3,7 @@ using Training_Project.Model;
 
 namespace Training_Project.Managers
 {
-    internal class TransactionUserInputManager : ITransactionUserInputManager
+    public class TransactionUserInputManager : ITransactionUserInputManager
     {
         ICategoryManager<string> categoryManager;
 
@@ -165,5 +165,27 @@ namespace Training_Project.Managers
             return validDate;
         }
 
+        public string? GetSortOption()
+        {
+            Console.WriteLine("--- Sort Options: ---");
+            Console.WriteLine("Amount");
+            Console.WriteLine("Category");
+            Console.WriteLine("Date");
+            Console.WriteLine("Type");
+            Console.WriteLine("------");
+            Console.Write("Enter a type to sort by: ");
+            return Console.ReadLine();
+        }
+
+        public string? GetFilterOption()
+        {
+            Console.WriteLine("--- Filter Options: ---");
+            Console.WriteLine("Type");
+            Console.WriteLine("Category");
+            Console.WriteLine("Date");
+            Console.WriteLine("------");
+            Console.Write("Enter a type to filter by: ");
+            return Console.ReadLine();
+        }
     }
 }
