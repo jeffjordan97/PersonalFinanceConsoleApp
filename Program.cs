@@ -10,10 +10,9 @@ namespace Training_Project
             JsonTransactionFileManager fileManager = new JsonTransactionFileManager();
             TransactionManager manager = new TransactionManager(fileManager);
             CategoryManager categoryManager = new CategoryManager(manager.GetAll());
-            TransactionUserInputManager userInputManager = new TransactionUserInputManager();
+            TransactionUserInputManager userInputManager = new TransactionUserInputManager(categoryManager);
 
             manager.SetCategoryManager(categoryManager);
-            userInputManager.SetCategoryManager(categoryManager);
             manager.SetTransactionUserInputManager(userInputManager);
 
 

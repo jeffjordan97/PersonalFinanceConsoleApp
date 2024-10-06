@@ -20,7 +20,7 @@ namespace Training_Project.Managers
 
         public void Add(string category)
         {
-            if (!categories.Contains(category.ToLower()) || !categories.Contains(category.ToUpper()))
+            if (!categories.Contains(category.ToLower(), StringComparer.OrdinalIgnoreCase))
             {
                 categories.Add(category);
             }

@@ -5,9 +5,9 @@ namespace Training_Project.Managers
 {
     internal class TransactionUserInputManager : ITransactionUserInputManager
     {
-        ICategoryManager<string>? categoryManager;
+        ICategoryManager<string> categoryManager;
 
-        public void SetCategoryManager(ICategoryManager<string> categoryManager)
+        public TransactionUserInputManager(ICategoryManager<string> categoryManager)
         {
             this.categoryManager = categoryManager;
         }
@@ -136,11 +136,6 @@ namespace Training_Project.Managers
             return transaction;
         }
 
-        //public string GetFilterOption()
-        //{
-
-        //}
-
         public (DateTime startDate, DateTime endDate) GetDateRange()
         {
             DateTime startDate = GetValidDate("Enter Start Date (yyyy-MM-dd): ");
@@ -169,11 +164,6 @@ namespace Training_Project.Managers
             }
             return validDate;
         }
-
-
-
-
-
 
     }
 }

@@ -1,10 +1,5 @@
 ﻿namespace Training_Project.Model
 {
-    internal enum TransactionType
-    {
-        Income,
-        Expense
-    }
     internal class Transaction(string description, decimal amount, TransactionType type, string category, DateTime date)
     {
         public int Id { get; set; }
