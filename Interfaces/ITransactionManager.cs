@@ -2,7 +2,7 @@
 
 namespace Training_Project.Interfaces
 {
-    internal interface ITransactionManager
+    public interface ITransactionManager
     {
         void Add();
         void Remove();

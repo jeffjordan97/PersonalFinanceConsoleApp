@@ -2,7 +2,7 @@
 
 namespace Training_Project.Interfaces
 {
-    internal interface ITransactionFileManager
+    public interface ITransactionFileManager
     {
         List<Transaction> LoadTransactions(string filePath);
         void SaveTransactions(string filePath, List<Transaction> transactions);

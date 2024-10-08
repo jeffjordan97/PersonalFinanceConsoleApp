@@ -3,7 +3,7 @@ using Training_Project.Model;
 
 namespace Training_Project.Managers
 {
-    internal class TransactionManager : ITransactionManager
+    public class TransactionManager : ITransactionManager
     {
         private const string TransactionsFileName = "transactions.json";
         private List<Transaction> transactions;
@@ -18,6 +18,7 @@ namespace Training_Project.Managers
 
             transactions = fileManager.LoadTransactions(TransactionsFileName) ?? new List<Transaction>();
             nextTransactionId = transactions.Any() ? transactions.Max(t => t.Id) + 1 : 1; // Initialize ID tracking
+
         }
 
         public void SetCategoryManager(ICategoryManager<string> categoryManager)
@@ -25,7 +26,7 @@ namespace Training_Project.Managers
             this.categoryManager = categoryManager;
         }
 
-        public void SetuserInputManagerManager(ITransactionUserInputManager userInputManagerManager)
+        public void SetTransactionUserInputManager(ITransactionUserInputManager userInputManagerManager)
         {
             this.userInputManager = userInputManagerManager;
         }
